@@ -68,15 +68,18 @@ const CheckContributionForm = () => {
       </div>
       <form>
         <h1 className="mt-20 mb-6 text-3xl font-bold leading-tight tracking-tight">
-          Project Starter
+          Mina Token Claim
         </h1>
         <div className="space-y-12">
           <div className="border-b border-white/10 pb-12">
-            <h2 className="text-base font-semibold leading-7 text-white">
-              Mina Token Claim
-            </h2>
+            <p className="text-sm leading-6 text-gray-400">
+              If you&apos;ve contributed to a Mina ecosystem project,
+              you&apos;re eligible for a claim! Verify your contribution with a
+              zero knowledge proof and we&apos;ll mint you 64 MINA.
+            </p>
+
             <p className="mt-1 text-sm leading-6 text-gray-400">
-              Enter the repository details to check if you have contributed.
+              Enter the details of the repository you contributed to.
             </p>
 
             <div className="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
@@ -161,6 +164,75 @@ const CheckContributionForm = () => {
           </button>
         </div>
       </form>
+
+      <section>
+        <h1 className="text-3xl mt-12 font-bold mb-4">
+          How the Mina GitHub Contribution Reward App Works
+        </h1>
+
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold mb-2">Step 1: Auth</h3>
+          <ul className="list-disc list-inside space-y-2">
+            <li className="pl-4">
+              The user authenticates with GitHub via OAuth in the browser.
+            </li>
+          </ul>
+        </div>
+
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold mb-2">Step 2: Verification</h3>
+          <ul className="list-disc list-inside space-y-2">
+            <li className="pl-4">
+              The backend oracle verifies the user's contribution to a
+              whitelisted Mina repository using their OAuth token. It returns a
+              signed message to the browser stating that the user has
+              contributed to a whitelisted repository.
+            </li>
+          </ul>
+        </div>
+
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold mb-2">
+            Step 3: Proof Generation
+          </h3>
+          <ul className="list-disc list-inside space-y-2">
+            <li className="pl-4">
+              The frontend executes the token drop smart contract with o1js. The
+              smart contract creates a state change, increasing the user's
+              balance, and emits an event stating that the user's address is
+              associated with a GitHub account that's contributed to an
+              ecosystem project.
+            </li>
+            <li className="pl-4">
+              Execution of the contract generates a zero-knowledge proof that
+              the state change is valid and that the oracle has deemed the user
+              eligible for the reward.
+            </li>
+            <li className="pl-4">
+              Public inputs: Account updates from smart contract execution, like
+              the user's balance increasing.
+            </li>
+            <li className="pl-4">
+              Private inputs: Method arguments, including the signed message
+              data from the backend.
+            </li>
+          </ul>
+        </div>
+
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold mb-2">Step 4: Tx Broadcast</h3>
+          <ul className="list-disc list-inside space-y-2">
+            <li className="pl-4">
+              The proof is broadcasted to the Mina network along with the
+              associated account updates for the contract execution.
+            </li>
+            <li className="pl-4">
+              The Mina network verifies the proof and updates the network state
+              to reflect the new balance of the user.
+            </li>
+          </ul>
+        </div>
+      </section>
     </>
   );
 };

@@ -183,7 +183,7 @@ const CheckContributionForm = () => {
           <h3 className="text-xl font-semibold mb-2">Step 2: Verification</h3>
           <ul className="list-disc list-inside space-y-2">
             <li className="pl-4">
-              The backend oracle verifies the user's contribution to a
+              The backend oracle verifies the user&apos;s contribution to a
               whitelisted Mina repository using their OAuth token. It returns a
               signed message to the browser stating that the user has
               contributed to a whitelisted repository.
@@ -198,9 +198,9 @@ const CheckContributionForm = () => {
           <ul className="list-disc list-inside space-y-2">
             <li className="pl-4">
               The frontend executes the token drop smart contract with o1js. The
-              smart contract creates a state change, increasing the user's
-              balance, and emits an event stating that the user's address is
-              associated with a GitHub account that's contributed to an
+              smart contract creates a state change, increasing the user&apos;s
+              balance, and emits an event stating that the user&apos;s address
+              is associated with a GitHub account that&apos;s contributed to an
               ecosystem project.
             </li>
             <li className="pl-4">
@@ -210,7 +210,7 @@ const CheckContributionForm = () => {
             </li>
             <li className="pl-4">
               Public inputs: Account updates from smart contract execution, like
-              the user's balance increasing.
+              the user&apos;s balance increasing.
             </li>
             <li className="pl-4">
               Private inputs: Method arguments, including the signed message

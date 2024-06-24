@@ -1,36 +1,85 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Mina zkApp: GitHub Contribution Reward System
 
-## Getting Started
+## Overview
 
-First, run the development server:
+This project is a Mina zkApp that allows users to prove their contributions to a specified GitHub repository within the Mina ecosystem and claim a token reward. The process ensures user privacy by utilizing zero-knowledge proofs (zk-SNARKs), enabling users to prove their contributions without revealing their identity or specific contributions.
+
+## Features
+
+- **OAuth Authentication:** Users authenticate with GitHub via OAuth in the application.
+- **Oracle Verification:** The back end acts as an oracle, verifying the user's contribution to a whitelisted Mina ecosystem repository.
+- **Signed Message:** The oracle returns a signed message confirming the user's eligibility for the reward.
+- **Zero-Knowledge Proof:** The zkApp contracts verify the signed message and generate a zk proof that the user contributed and is eligible without disclosing their identity or specific contribution.
+
+## Table of Contents
+
+1. [Architecture](#architecture)
+2. [Prerequisites](#prerequisites)
+3. [Installation](#installation)
+4. [Usage](#usage)
+5. [Contributing](#contributing)
+6. [License](#license)
+
+## Architecture
+
+1. **Frontend:**
+
+   - Handles GitHub OAuth authentication.
+   - Communicates with the back end to submit user details and receive verification.
+   - Uses o1js to run the prover function for the smart contract. This generates a zero-knowledge proof that the user
+     has been deemed eligible for the reward by the back end.
+     - Public inputs to the proof are the account updates caused by the smart contract execution, like the user's
+       balance
+       increasing.
+     - Private inputs to the proof are all method arguments passed into the smart contract, in this case, the signed
+       message data from the back end.
+
+2. **Backend:**
+
+   - Acts as an oracle to verify GitHub contributions against a set of whitelisted repositories in the Mina ecosystem.
+   - Returns a signed message confirming the user's eligibility.
+
+3. **Mina zkApp:**
+   - Verifies the signed message from the oracle.
+   - Sends MINA to eligible users.
+   - Emits an event signaling that the user's address is associated with a github account that earned the reward
+
+## Installation
+
+1. **Configure NPM and Install dependencies:**
+
+```bash
+nvm use
+npm i
+```
+
+2. **Create Github Oauth application**
+   - Sign in to GitHub and go to **Settings** > **Developer settings** > **OAuth Apps**.
+   - Click **New OAuth App** and fill in the required details.
+   - Set the **Authorization callback URL** to your app's callback URL.
+     - This will depend on whether you're developing locally or using hosting, for local dev use `http://localhost:3000/auth/callback`.
+   - Click **Register application**.
+   - Note down the **Client ID** and **Client Secret** for configuring your app.
+3. **Generate a NextAuth secret**
+
+```bash
+openssl rand -base64 32
+```
+
+4. **Configure env vars with values from the Oauth app:**
+
+```bash
+cp .env.example .env.local
+
+GITHUB_CLIENT_ID= # retrieve from your github oauth app
+GITHUB_CLIENT_SECRET= # retrieve from your github oauth app
+NEXTAUTH_SECRET= # 32 byte base64 string, generate one with openssl rand -base64 32
+NEXTAUTH_URL=http://localhost:3000 # authentication url for NextAuth to use, for local dev use localhost
+
+```
+
+5. **Serve the app locally**
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.

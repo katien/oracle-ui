@@ -1,4 +1,51 @@
+"use client";
+
+import { useEffect } from "react";
+import MinaProvider from "@aurowallet/mina-provider";
+
 export default function Page() {
+  useEffect(() => {
+    const minaProvider: MinaProvider = window["mina"] as any;
+    (async () => {
+      const { fetchAccount, PublicKey, Mina } = await import("o1js");
+      const { Add } = await import("oracle-contracts");
+
+      // Network configuration
+      const network = Mina.Network({
+        mina: "http://127.0.0.1:8080/graphql",
+        archive: "http://127.0.0.1:8282",
+        lightnetAccountManager: "http://127.0.0.1:8181",
+      });
+      Mina.setActiveInstance(network);
+      const accountsResult = await minaProvider.requestAccounts();
+      if (!Array.isArray(accountsResult)) {
+        throw Error(JSON.stringify(accountsResult));
+      }
+
+      const addAddress =
+        "B62qiUyHpPCsxoxPMupGkGNtQEeUqhnoVDuD3ksZsCs5JndmJN1iVdT";
+      await fetchAccount({ publicKey: addAddress });
+      await Add.compile();
+      const addApp = new Add(PublicKey.fromBase58(addAddress));
+
+      let num = addApp.num.get();
+      console.log("initial number", num);
+
+      const tx = await Mina.transaction(
+        PublicKey.fromBase58(accountsResult[0]),
+        async () => {
+          await addApp.update();
+        },
+      );
+      await tx.prove();
+      await minaProvider.sendTransaction({
+        transaction: tx.toJSON(),
+      });
+      num = addApp.num.get();
+
+      console.log("new number", num);
+    })();
+  }, []);
   return (
     <form>
       <h1 className="mt-20 mb-6 text-3xl font-bold leading-tight tracking-tight">

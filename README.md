@@ -75,7 +75,7 @@ GITHUB_CLIENT_ID= # retrieve from your github oauth app
 GITHUB_CLIENT_SECRET= # retrieve from your github oauth app
 NEXTAUTH_SECRET= # 32 byte base64 string, generate one with openssl rand -base64 32
 NEXTAUTH_URL=http://localhost:3000 # authentication url for NextAuth to use, for local dev use localhost
-
+ORACLE_PRIVATE_KEY= # mina private key for the oracle to use to sign messages
 ```
 
 5. **Serve the app locally**

@@ -99,7 +99,7 @@ const CheckContributionForm = () => {
             <p className="text-sm leading-6 text-gray-400">
               If you&apos;ve contributed to a Mina ecosystem project,
               you&apos;re eligible for a claim! Verify your contribution with a
-              zero knowledge proof and we&apos;ll mint you 64 MINA.
+              zero knowledge proof and we&apos;ll mint you some MINA.
             </p>
 
             <p className="mt-1 text-sm leading-6 text-gray-400">

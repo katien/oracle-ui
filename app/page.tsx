@@ -4,6 +4,7 @@ import GithubAuthButton from "@/components/GithubAuthButton";
 import { useSession } from "next-auth/react";
 import { OracleResponse } from "@/app/api/check-contribution/route";
 import HowItWorks from "@/components/HowItWorks";
+import ProofGeneration from "@/components/ProofGeneration";
 
 const CheckContributionForm = () => {
   const { data: session } = useSession();
@@ -160,6 +161,7 @@ const CheckContributionForm = () => {
         </div>
       )}
 
+      <ProofGeneration />
       <HowItWorks />
     </>
   );

@@ -1,0 +1,127 @@
+"use client";
+
+import { useState } from "react";
+import { stringToBigInt } from "@/lib/stringUtils";
+import config from "@/lib/config";
+
+export default function ProofGeneration() {
+  const [txJson, setTxJson] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+
+  async function initMina() {
+    try {
+      // Reset previous state
+      setTxJson(null);
+      setError(null);
+      setStatus("Initializing...");
+
+      // @ts-ignore
+      const minaProvider: MinaProvider = window["mina"] as any;
+      const { Field, Signature, fetchAccount, PublicKey, Mina } = await import(
+        "o1js"
+      );
+      const { TokenDrop } = await import("oracle-contracts");
+
+      setStatus("Configuring Mina network connection...");
+      // Network configuration - archive node may be needed for events
+      const network = Mina.Network({
+        mina: config.minaNodeUri,
+        archive: config.minaArchiveNodeUri,
+      });
+      Mina.setActiveInstance(network);
+      await fetchAccount({ publicKey: config.tokenDropContractAddress });
+
+      setStatus("Compiling contract...");
+      await TokenDrop.compile();
+      const tokenDropApp = new TokenDrop(
+        PublicKey.fromBase58(config.tokenDropContractAddress),
+      );
+
+      setStatus("Retrieving min stars...");
+      let minStars = tokenDropApp.minStars.get();
+      console.log("minStars: ", minStars.toString());
+
+      setStatus("Sending transaction with signed oracle message...");
+      // Fake data - take these as props
+      const stars = 1;
+      const username = "katien";
+      const fieldEncodedUsername = Field(stringToBigInt(username));
+      const signature = Signature.fromBase58(
+        "7mXQqm4vgghAodYti1fDHNckDH9dv4pZWbAbzE9i7huBoWXR6pXig3YfUweiNQGH4JczJVo6RB6N3tVF3iADtfiKzNyRMDv6",
+      );
+
+      const accountsResult = await minaProvider?.requestAccounts();
+      if (!minaProvider || !Array.isArray(accountsResult)) {
+        throw new Error(
+          "Failed to retrieve accounts - is Auro wallet installed?\n" +
+          accountsResult
+            ? JSON.stringify(accountsResult)
+            : "",
+        );
+      }
+      const tx = await Mina.transaction(
+        PublicKey.fromBase58(accountsResult[0]),
+        async () => {
+          await tokenDropApp.verifyContribution(
+            fieldEncodedUsername,
+            Field(stars),
+            signature,
+          );
+        },
+      );
+      await tx.prove();
+
+      // Set the transaction JSON to state before sending
+      const txJsonString = JSON.stringify(tx.toJSON(), null, 2);
+      setTxJson(txJsonString);
+
+      setStatus("Sending transaction...");
+      await minaProvider.sendTransaction({ transaction: tx.toJSON() });
+
+      setStatus("Transaction sent successfully!");
+    } catch (err: any) {
+      console.error("An error occurred:", err);
+      setError(err.message);
+      setStatus(null); // Clear status on error
+    }
+  }
+
+  return (
+    <div>
+      <button
+        className="rounded-md bg-indigo-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 flex items-center"
+        onClick={initMina}
+      >
+        Generate proof
+      </button>
+
+      {status && (
+        <p className="mt-3 text-sm leading-6 text-gray-400">Status: {status}</p>
+      )}
+
+      {error && (
+        <p className="mt-3 text-sm leading-6 text-red-500">Error: {error}</p>
+      )}
+
+      {txJson && (
+        <div className="mt-6">
+          <label
+            htmlFor="txJson"
+            className="block text-sm font-medium leading-6 text-white"
+          >
+            Transaction JSON
+          </label>
+          <textarea
+            id="txJson"
+            name="txJson"
+            rows={10}
+            className="w-full rounded-md bg-gray-800 text-white p-2"
+            readOnly
+            value={txJson}
+          />
+        </div>
+      )}
+    </div>
+  );
+}

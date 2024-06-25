@@ -5,6 +5,17 @@ import Client, { NetworkId } from "mina-signer";
 import config from "@/lib/config";
 import { stringToBigInt } from "@/lib/stringUtils";
 
+export interface OracleResponse {
+  data: {
+    repoOwner: string;
+    repoName: string;
+    userName: string;
+    stars: number;
+  };
+  signature: string | null;
+  publicKey: string | null;
+}
+
 const client = new Client({
   network: (process.env.NETWORK_KIND ?? "testnet") as NetworkId,
 });
@@ -13,48 +24,63 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authConfig);
   if (!session) {
     return NextResponse.json(
-      { error: "User is not authenticated with github" },
+      { error: "User is not authenticated with GitHub" },
       { status: 401 },
     );
   }
 
   const { repoOwner, repoName } = await req.json();
-  const response = await fetch(
+
+  // Fetch contributors for the repository
+  const contributorsResponse = await fetch(
     `https://api.github.com/repos/${repoOwner}/${repoName}/contributors`,
-    {
-      headers: {
-        Authorization: `token ${session.accessToken}`,
-      },
-    },
+    { headers: { Authorization: `token ${session.accessToken}` } },
   );
 
-  if (!response.ok) {
+  if (!contributorsResponse.ok)
     return NextResponse.json(
       {
-        data: {
-          repoOwner,
-          repoName,
-          userName: session.user.name,
-          contributed: false,
-        },
-        signature: null,
-        publicKey: null,
+        error:
+          "Something went wrong fetching contribution info from GitHub:\n " +
+          JSON.stringify(await contributorsResponse.json()),
       },
-      { status: response.status },
+      { status: 500 },
     );
-  }
 
-  const contributors = await response.json();
+  // verify the user has contributed to the repo
+  const contributors = await contributorsResponse.json();
   const hasContributed = contributors.some(
     (contributor: any) => contributor.login === session.user.name,
   );
-  // temporarily spoof a contribution count
-  let contributions = hasContributed ? 67 : 0;
-  let signedResponse = getSignedResponse(
+  if (!hasContributed)
+    return NextResponse.json(
+      { error: "User did not contribute to repo" },
+      { status: 403 },
+    );
+
+  // Fetch repository details to get the star count
+  const repoResponse = await fetch(
+    `https://api.github.com/repos/${repoOwner}/${repoName}`,
+    { headers: { Authorization: `token ${session.accessToken}` } },
+  );
+
+  if (!repoResponse.ok)
+    return NextResponse.json(
+      {
+        error:
+          "Something went wrong fetching repository info from GitHub:\n" +
+          JSON.stringify(await contributorsResponse.json()),
+      },
+      { status: 500 },
+    );
+
+  const repoDetails = await repoResponse.json();
+  // Sign the response
+  const signedResponse = signResponse(
     session.user.name,
     repoOwner,
     repoName,
-    contributions,
+    repoDetails.stargazers_count,
   );
 
   return NextResponse.json(signedResponse);
@@ -65,37 +91,24 @@ export async function POST(req: NextRequest) {
   return this.toString();
 };
 
-export interface SignedResponse {
-  data: {
-    repoOwner: string;
-    repoName: string;
-    userName: string;
-    contributions: number;
-  };
-  signature: string | null;
-  publicKey: string | null;
-}
-
-function getSignedResponse(
+function signResponse(
   userName: string,
   repoOwner: string,
   repoName: string,
-  contributions: number,
-): SignedResponse {
+  stars: number,
+): OracleResponse {
   let privateKey = config.oraclePrivateKey;
-  const result: SignedResponse = {
-    data: { userName, repoOwner, repoName, contributions: contributions },
+  const result: OracleResponse = {
+    data: { userName, repoOwner, repoName, stars },
     signature: null,
     publicKey: null,
   };
-  if (contributions > 0) {
-    const signature = client.signFields(
-      [stringToBigInt(userName), BigInt(contributions)],
-      privateKey,
-    );
-    result.signature = signature.signature;
-    result.publicKey = signature.publicKey;
-  }
+  const signature = client.signFields(
+    [stringToBigInt(userName), BigInt(stars)],
+    privateKey,
+  );
+  result.signature = signature.signature;
+  result.publicKey = signature.publicKey;
 
   return result;
 }

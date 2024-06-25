@@ -1,10 +1,8 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import GithubAuthButton from "@/components/GithubAuthButton";
 import { useSession } from "next-auth/react";
-import { SignedResponse } from "@/app/api/check-contribution/route";
-import MinaProvider from "@aurowallet/mina-provider";
-import { stringToBigInt } from "oracle-contracts/build/utils/stringUtils";
+import { OracleResponse } from "@/app/api/check-contribution/route";
 
 const CheckContributionForm = () => {
   const { data: session } = useSession();
@@ -18,73 +16,80 @@ const CheckContributionForm = () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ repoOwner, repoName }),
     });
-    const data = (await response.json()) as SignedResponse;
-    setHasContributed(data.data.contributions > 0);
+
+    if (response.ok) {
+      const oracleResponse = (await response.json()) as OracleResponse;
+      console.log(oracleResponse);
+      setHasContributed(true);
+    } else {
+      const errorMessage = (await response.json()).error;
+      console.log(errorMessage);
+    }
   };
 
-  useEffect(() => {
-    if (!window) return;
-    // @ts-ignore
-    const minaProvider: MinaProvider = window["mina"] as any;
-    (async () => {
-      const { Field, Signature, fetchAccount, PublicKey, Mina } = await import(
-        "o1js"
-      );
-      const { TokenDrop } = await import("oracle-contracts");
-
-      // Network configuration
-      const network = Mina.Network({
-        mina: "http://127.0.0.1:8080/graphql",
-        archive: "http://127.0.0.1:8282",
-        lightnetAccountManager: "http://127.0.0.1:8181",
-      });
-      Mina.setActiveInstance(network);
-      const accountsResult = await minaProvider.requestAccounts();
-      if (!Array.isArray(accountsResult)) {
-        throw Error(JSON.stringify(accountsResult));
-      }
-
-      const tokenDropAddress =
-        "B62qjm7vuCrZwLSsnSnq8n6Kg9nkvSBC8nEWxpKGqzSjEH2gADT4WZr";
-      await fetchAccount({ publicKey: tokenDropAddress });
-      await TokenDrop.compile();
-      const tokenDropApp = new TokenDrop(
-        PublicKey.fromBase58(tokenDropAddress),
-      );
-
-      let minContributions = tokenDropApp.minContributions.get();
-      console.log("minContributions", minContributions);
-
-      const contributions = 67;
-      const username = "katien";
-      const fieldEncodedUsername = Field(stringToBigInt(username));
-      const signature = Signature.fromBase58(
-        "7mXBiworTwfx5fYu5nFrgQGxZworLmh8oictQGXw8SDR1z3CEJJbiBitfFrADazUj7AYr5GMTT2b8Vdq6gpwCTNJ2uhB4MUx",
-      );
-
-      const tx = await Mina.transaction(
-        PublicKey.fromBase58(accountsResult[0]),
-        async () => {
-          await tokenDropApp.verifyContribution(
-            fieldEncodedUsername,
-            Field(contributions),
-            signature,
-          );
-        },
-      );
-      await tx.prove();
-      await minaProvider.sendTransaction({
-        transaction: tx.toJSON(),
-      });
-
-      // window.app = tokenDropApp;
-      // check that the verification event was emitted
-      // const events = await tokenDropApp.fetchEvents();
-      // const verifiedEventValue = events[0].event.data.toFields(null)[0];
-      // console.log("verifiedEventValue", verifiedEventValue);
-      console.log("Field encoded username", fieldEncodedUsername);
-    })();
-  }, []);
+  // useEffect(() => {
+  //   if (!window || !session) return;
+  //   // @ts-ignore
+  //   const minaProvider: MinaProvider = window["mina"] as any;
+  //   (async () => {
+  //     const { Field, Signature, fetchAccount, PublicKey, Mina } = await import(
+  //       "o1js"
+  //       );
+  //     const { TokenDrop } = await import("oracle-contracts");
+  //
+  //     // Network configuration
+  //     const network = Mina.Network({
+  //       mina: "http://127.0.0.1:8080/graphql",
+  //       archive: "http://127.0.0.1:8282",
+  //       lightnetAccountManager: "http://127.0.0.1:8181"
+  //     });
+  //     Mina.setActiveInstance(network);
+  //     const accountsResult = await minaProvider.requestAccounts();
+  //     if (!Array.isArray(accountsResult)) {
+  //       throw Error(JSON.stringify(accountsResult));
+  //     }
+  //
+  //     const tokenDropAddress =
+  //       "B62qjm7vuCrZwLSsnSnq8n6Kg9nkvSBC8nEWxpKGqzSjEH2gADT4WZr";
+  //     await fetchAccount({ publicKey: tokenDropAddress });
+  //     await TokenDrop.compile();
+  //     const tokenDropApp = new TokenDrop(
+  //       PublicKey.fromBase58(tokenDropAddress)
+  //     );
+  //
+  //     let minContributions = tokenDropApp.minContributions.get();
+  //     console.log("minContributions", minContributions);
+  //
+  //     const contributions = 67;
+  //     const username = "katien";
+  //     const fieldEncodedUsername = Field(stringToBigInt(username));
+  //     const signature = Signature.fromBase58(
+  //       "7mXBiworTwfx5fYu5nFrgQGxZworLmh8oictQGXw8SDR1z3CEJJbiBitfFrADazUj7AYr5GMTT2b8Vdq6gpwCTNJ2uhB4MUx"
+  //     );
+  //
+  //     const tx = await Mina.transaction(
+  //       PublicKey.fromBase58(accountsResult[0]),
+  //       async () => {
+  //         await tokenDropApp.verifyContribution(
+  //           fieldEncodedUsername,
+  //           Field(contributions),
+  //           signature
+  //         );
+  //       }
+  //     );
+  //     await tx.prove();
+  //     await minaProvider.sendTransaction({
+  //       transaction: tx.toJSON()
+  //     });
+  //
+  //     // window.app = tokenDropApp;
+  //     // check that the verification event was emitted
+  //     // const events = await tokenDropApp.fetchEvents();
+  //     // const verifiedEventValue = events[0].event.data.toFields(null)[0];
+  //     // console.log("verifiedEventValue", verifiedEventValue);
+  //     console.log("Field encoded username", fieldEncodedUsername);
+  //   })();
+  // }, []);
   return (
     <>
       <div className="flex justify-end">

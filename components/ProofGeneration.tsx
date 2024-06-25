@@ -87,7 +87,6 @@ export default function ProofGeneration({
       await minaProvider.sendTransaction({ transaction });
 
       setStatus("Transaction sent successfully!");
-      window.app = tokenDropApp;
       // check that the verification event was emitted
       const events = await tokenDropApp.fetchEvents();
       const contributionVerifiedEvent = events[0].event.data

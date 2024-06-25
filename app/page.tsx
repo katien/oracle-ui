@@ -11,7 +11,7 @@ const CheckContributionForm = () => {
   const [repoOwner, setRepoOwner] = useState("");
   const [repoName, setRepoName] = useState("");
   const [hasContributed, setHasContributed] = useState<boolean | null>(null);
-  const [apiResponse, setApiResponse] = useState<string | null>(null);
+  const [apiResponse, setApiResponse] = useState<OracleResponse | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
 
   const checkContribution = async () => {
@@ -26,7 +26,7 @@ const CheckContributionForm = () => {
 
     if (response.ok) {
       const oracleResponse = (await response.json()) as OracleResponse;
-      setApiResponse(JSON.stringify(oracleResponse, null, 2)); // Pretty-print JSON
+      setApiResponse(oracleResponse); // Pretty-print JSON
       setHasContributed(true);
       setServerError(null);
     } else {
@@ -147,7 +147,7 @@ const CheckContributionForm = () => {
         </div>
       </form>
 
-      {apiResponse && (
+      {!!apiResponse && (
         <div className="mt-6">
           <h3 className="text-xl font-semibold mb-2">Oracle Response</h3>
           <textarea
@@ -156,12 +156,18 @@ const CheckContributionForm = () => {
             rows={12}
             className="w-full rounded-md bg-gray-800 text-white p-2"
             readOnly
-            value={apiResponse}
+            value={JSON.stringify(apiResponse, null, 4)}
           />
+          {apiResponse.signature && (
+            <ProofGeneration
+              stars={apiResponse.data.stars}
+              username={apiResponse.data.userName}
+              signature={apiResponse.signature}
+            />
+          )}
         </div>
       )}
 
-      <ProofGeneration />
       <HowItWorks />
     </>
   );

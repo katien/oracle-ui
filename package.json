@@ -16,7 +16,7 @@
     "mina-signer": "^3.0.7",
     "next": "14.2.3",
     "next-auth": "^4.24.7",
-    "oracle-contracts": "^0.1.0",
+    "oracle-contracts": "^0.3.0",
     "react": "^18",
     "react-dom": "^18"
   },

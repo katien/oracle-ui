@@ -1,13 +1,24 @@
-"use client";
-
 import { useState } from "react";
 import { stringToBigInt } from "@/lib/stringUtils";
 import config from "@/lib/config";
 
-export default function ProofGeneration() {
+interface ProofGenerationProps {
+  stars: number;
+  username: string;
+  signature: string;
+}
+
+export default function ProofGeneration({
+  stars,
+  username,
+  signature,
+}: ProofGenerationProps) {
   const [txJson, setTxJson] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [verificationEvent, setVerificationEvent] = useState<string | null>(
+    null,
+  );
 
   async function initMina() {
     try {
@@ -15,6 +26,7 @@ export default function ProofGeneration() {
       setTxJson(null);
       setError(null);
       setStatus("Initializing...");
+      setVerificationEvent(null);
 
       // @ts-ignore
       const minaProvider: MinaProvider = window["mina"] as any;
@@ -40,16 +52,12 @@ export default function ProofGeneration() {
 
       setStatus("Retrieving min stars...");
       let minStars = tokenDropApp.minStars.get();
-      console.log("minStars: ", minStars.toString());
+      console.log("minStars", minStars);
 
       setStatus("Sending transaction with signed oracle message...");
-      // Fake data - take these as props
-      const stars = 1;
-      const username = "katien";
+      // Use props for fake data
       const fieldEncodedUsername = Field(stringToBigInt(username));
-      const signature = Signature.fromBase58(
-        "7mXQqm4vgghAodYti1fDHNckDH9dv4pZWbAbzE9i7huBoWXR6pXig3YfUweiNQGH4JczJVo6RB6N3tVF3iADtfiKzNyRMDv6",
-      );
+      const signatureObject = Signature.fromBase58(signature);
 
       const accountsResult = await minaProvider?.requestAccounts();
       if (!minaProvider || !Array.isArray(accountsResult)) {
@@ -66,20 +74,30 @@ export default function ProofGeneration() {
           await tokenDropApp.verifyContribution(
             fieldEncodedUsername,
             Field(stars),
-            signature,
+            signatureObject,
           );
         },
       );
       await tx.prove();
 
       // Set the transaction JSON to state before sending
-      const txJsonString = JSON.stringify(tx.toJSON(), null, 2);
-      setTxJson(txJsonString);
-
+      const transaction = tx.toJSON();
+      setTxJson(JSON.stringify(JSON.parse(transaction), null, 4));
       setStatus("Sending transaction...");
-      await minaProvider.sendTransaction({ transaction: tx.toJSON() });
+      await minaProvider.sendTransaction({ transaction });
 
       setStatus("Transaction sent successfully!");
+      window.app = tokenDropApp;
+      // check that the verification event was emitted
+      const events = await tokenDropApp.fetchEvents();
+      const contributionVerifiedEvent = events[0].event.data
+        .toFields(null)[0]
+        .toString();
+      setVerificationEvent(contributionVerifiedEvent);
+      console.log("contributionVerifiedEvent event", contributionVerifiedEvent);
+      console.log(
+        `Username (${username}) encoded as a field: ${fieldEncodedUsername}`,
+      );
     } catch (err: any) {
       console.error("An error occurred:", err);
       setError(err.message);
@@ -119,6 +137,25 @@ export default function ProofGeneration() {
             className="w-full rounded-md bg-gray-800 text-white p-2"
             readOnly
             value={txJson}
+          />
+        </div>
+      )}
+
+      {verificationEvent && (
+        <div className="mt-6">
+          <label
+            htmlFor="verificationEvent"
+            className="block text-sm font-medium leading-6 text-white"
+          >
+            Verification Event
+          </label>
+          <textarea
+            id="verificationEvent"
+            name="verificationEvent"
+            rows={5}
+            className="w-full rounded-md bg-gray-800 text-white p-2"
+            readOnly
+            value={`BigNumber encoding for string ${username}: ${stringToBigInt(username)}\nVerification event for transaction: ${verificationEvent}`}
           />
         </div>
       )}

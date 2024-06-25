@@ -5,7 +5,6 @@ import { useSession } from "next-auth/react";
 import { SignedResponse } from "@/app/api/check-contribution/route";
 import MinaProvider from "@aurowallet/mina-provider";
 import { stringToBigInt } from "oracle-contracts/build/utils/stringUtils";
-import { Field, Signature } from "o1js";
 
 const CheckContributionForm = () => {
   const { data: session } = useSession();
@@ -24,9 +23,13 @@ const CheckContributionForm = () => {
   };
 
   useEffect(() => {
+    if (!window) return;
+    // @ts-ignore
     const minaProvider: MinaProvider = window["mina"] as any;
     (async () => {
-      const { fetchAccount, PublicKey, Mina } = await import("o1js");
+      const { Field, Signature, fetchAccount, PublicKey, Mina } = await import(
+        "o1js"
+      );
       const { TokenDrop } = await import("oracle-contracts");
 
       // Network configuration

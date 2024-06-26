@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { stringToBigInt } from "@/lib/stringUtils";
 import config from "@/lib/config";
+import MinaProvider from "@aurowallet/mina-provider";
 
 interface ProofGenerationProps {
   stars: number;
@@ -19,43 +20,66 @@ export default function ProofGeneration({
   const [verificationEvent, setVerificationEvent] = useState<string | null>(
     null,
   );
+  const [isCompiled, setIsCompiled] = useState<boolean>(false);
+  const [minaProvider, setMinaProvider] = useState<any>(null);
+  const [minaModules, setMinaModules] = useState<any>(null);
+  const [tokenDropApp, setTokenDropApp] = useState<any>(null);
 
-  async function initMina() {
+  useEffect(() => {
+    async function initMina() {
+      try {
+        // Reset previous state
+        setTxJson(null);
+        setError(null);
+        setStatus("Initializing...");
+        setVerificationEvent(null);
+
+        // @ts-ignore
+        const minaProvider: MinaProvider = window["mina"] as any;
+        const { Field, Signature, fetchAccount, PublicKey, Mina } =
+          await import("o1js");
+        const { TokenDrop } = await import("oracle-contracts");
+
+        setStatus("Configuring Mina network connection...");
+        // Network configuration - archive node may be needed for events
+        const network = Mina.Network({
+          mina: config.minaNodeUri,
+          archive: config.minaArchiveNodeUri,
+        });
+        Mina.setActiveInstance(network);
+        await fetchAccount({ publicKey: config.tokenDropContractAddress });
+
+        setStatus("Compiling contract...");
+        await TokenDrop.compile();
+        const tokenDropAppInstance = new TokenDrop(
+          PublicKey.fromBase58(config.tokenDropContractAddress),
+        );
+
+        setStatus("Retrieving min stars...");
+        let minStars = tokenDropAppInstance.minStars.get();
+        console.log("minStars", minStars);
+
+        // Set states after successful initialization and compilation
+        setMinaProvider(minaProvider);
+        setMinaModules({ Field, Signature, PublicKey, Mina });
+        setTokenDropApp(tokenDropAppInstance);
+        setIsCompiled(true);
+        setStatus(null); // Clear status after compilation
+      } catch (err: any) {
+        console.error("An error occurred:", err);
+        setError(err.message);
+        setStatus(null); // Clear status on error
+      }
+    }
+
+    initMina();
+  }, []);
+
+  async function generateProof() {
     try {
-      // Reset previous state
-      setTxJson(null);
-      setError(null);
-      setStatus("Initializing...");
-      setVerificationEvent(null);
-
-      // @ts-ignore
-      const minaProvider: MinaProvider = window["mina"] as any;
-      const { Field, Signature, fetchAccount, PublicKey, Mina } = await import(
-        "o1js"
-      );
-      const { TokenDrop } = await import("oracle-contracts");
-
-      setStatus("Configuring Mina network connection...");
-      // Network configuration - archive node may be needed for events
-      const network = Mina.Network({
-        mina: config.minaNodeUri,
-        archive: config.minaArchiveNodeUri,
-      });
-      Mina.setActiveInstance(network);
-      await fetchAccount({ publicKey: config.tokenDropContractAddress });
-
-      setStatus("Compiling contract...");
-      await TokenDrop.compile();
-      const tokenDropApp = new TokenDrop(
-        PublicKey.fromBase58(config.tokenDropContractAddress),
-      );
-
-      setStatus("Retrieving min stars...");
-      let minStars = tokenDropApp.minStars.get();
-      console.log("minStars", minStars);
-
       setStatus("Sending transaction with signed oracle message...");
-      // Use props for fake data
+      const { Field, Signature, PublicKey, Mina } = minaModules;
+
       const fieldEncodedUsername = Field(stringToBigInt(username));
       const signatureObject = Signature.fromBase58(signature);
 
@@ -63,9 +87,7 @@ export default function ProofGeneration({
       if (!minaProvider || !Array.isArray(accountsResult)) {
         throw new Error(
           "Failed to retrieve accounts - is Auro wallet installed?\n" +
-          accountsResult
-            ? JSON.stringify(accountsResult)
-            : "",
+            (accountsResult ? JSON.stringify(accountsResult) : ""),
         );
       }
       const tx = await Mina.transaction(
@@ -108,7 +130,8 @@ export default function ProofGeneration({
     <div>
       <button
         className="rounded-md bg-indigo-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 flex items-center"
-        onClick={initMina}
+        onClick={generateProof}
+        disabled={!isCompiled}
       >
         Generate proof
       </button>

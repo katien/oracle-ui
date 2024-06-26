@@ -7,6 +7,7 @@ const __dirname = path.dirname(__filename);
 /** @type {import("next").NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
+  productionBrowserSourceMaps: true,
   // tell webpack to use the ui's instance of Mina
   // required if using a locally linked contracts package with its own instance of Mina
   webpack(config, { isServer }) {

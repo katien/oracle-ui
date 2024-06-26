@@ -11,15 +11,6 @@ This project is a Mina zkApp that allows users to prove their contributions to a
 - **Signed Message:** The oracle returns a signed message confirming the user's eligibility for the reward.
 - **Zero-Knowledge Proof:** The zkApp contracts verify the signed message and generate a zk proof that the user contributed and is eligible without disclosing their identity or specific contribution.
 
-## Table of Contents
-
-1. [Architecture](#architecture)
-2. [Prerequisites](#prerequisites)
-3. [Installation](#installation)
-4. [Usage](#usage)
-5. [Contributing](#contributing)
-6. [License](#license)
-
 ## Architecture
 
 1. **Frontend:**
